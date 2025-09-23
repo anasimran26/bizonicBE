@@ -5,20 +5,29 @@ const { User } = require("../models");
 // Signup
 exports.signup = async (req, res) => {
   try {
-    const { full_name, username, email, password } = req.body;
-
+    const { full_name, email, password } = req.body;
     const existing = await User.findOne({ where: { email } });
-    if (existing)
+    if (existing) {
       return res.status(400).json({ message: "Email already in use" });
-
-    const existingUsername = await User.findOne({ where: { username } });
-    if (existingUsername)
-      return res.status(400).json({ message: "Username already in use" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const lastUser = await User.findOne({
+      order: [["createdAt", "DESC"]],
+    });
+
+    let nextId = 1;
+    if (lastUser && lastUser.user_id) {
+      const lastIdNum = parseInt(lastUser.user_id.replace("USR-", ""), 10);
+      nextId = lastIdNum + 1;
+    }
+
+    const userId = `USR-${String(nextId).padStart(8, "0")}`;
+
+    // Create user
     const user = await User.create({
+      user_id: userId,
       full_name,
-      username,
       email,
       password: hashedPassword,
     });
@@ -27,8 +36,8 @@ exports.signup = async (req, res) => {
       message: "User created successfully",
       user: {
         id: user.id,
+        user_id: user.user_id,
         full_name: user.full_name,
-        username: user.username,
         email: user.email,
       },
     });
@@ -43,10 +52,14 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ where: { email } });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(400).json({ message: "Invalid credentials" });
+    if (!valid) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const token = jwt.sign(
       { id: user.id, email: user.email },
@@ -64,18 +77,6 @@ exports.login = async (req, res) => {
         email: user.email,
       },
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// Profile
-exports.me = async (req, res) => {
-  try {
-    const user = await User.findByPk(req.user.id, {
-      attributes: ["id", "full_name", "username", "email", "createdAt"],
-    });
-    res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
