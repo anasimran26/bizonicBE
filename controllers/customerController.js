@@ -51,3 +51,48 @@ exports.getCustomers = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Update customer
+exports.updateCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const customer = await Customer.findOne({
+      where: { id: id, user_id: user.user_id },
+    });
+
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
+
+    await customer.update(req.body);
+
+    res.json({ message: "Customer updated", customer });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete customer
+exports.deleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const customer = await Customer.findOne({
+      where: { id: id, user_id: user.user_id },
+    });
+    if (!customer)
+      return res.status(404).json({ message: "Customer not found" });
+
+    await customer.destroy();
+
+    res.json({ message: "Customer deleted" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

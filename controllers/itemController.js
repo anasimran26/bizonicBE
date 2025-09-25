@@ -4,10 +4,9 @@ const { Item, User } = require("../models");
 exports.createItem = async (req, res) => {
   try {
     const { item_name, date, stock, purchase_price, sale_price } = req.body;
+
     const user = await User.findByPk(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const item = await Item.create({
       user_id: user.user_id,
@@ -31,9 +30,7 @@ exports.createItem = async (req, res) => {
 exports.getItems = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const items = await Item.findAll({
       where: { user_id: user.user_id },
@@ -41,6 +38,48 @@ exports.getItems = async (req, res) => {
     });
 
     res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Update Item
+exports.updateItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const item = await Item.findOne({
+      where: { id: id, user_id: user.user_id },
+    });
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    await item.update(req.body);
+
+    res.json({ message: "Item updated successfully", item });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete Item
+exports.deleteItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findByPk(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const item = await Item.findOne({
+      where: { id: id, user_id: user.user_id },
+    });
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    await item.destroy();
+
+    res.json({ message: "Item deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
