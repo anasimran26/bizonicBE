@@ -7,13 +7,12 @@ const { User, BusinessProfile } = require("../models");
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 587,
-  secure: false, 
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
 });
-
 
 // Signup
 exports.signup = async (req, res) => {
@@ -86,11 +85,7 @@ exports.signup = async (req, res) => {
 exports.verifyEmail = async (req, res) => {
   try {
     const { token } = req.query;
-    console.log("Received token:", token); // debug
-
     const user = await User.findOne({ where: { verificationToken: token } });
-    console.log("Found user:", user ? user.email : "none"); // debug
-
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
@@ -105,12 +100,10 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-
 // Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -136,12 +129,64 @@ exports.login = async (req, res) => {
       message: "Login successful",
       token,
       user: {
-        id: user.id,
         full_name: user.full_name,
-        username: user.username,
-        email: user.email,
       },
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Forgot Password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid Email" });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiry = Date.now() + 1000 * 60 * 15;
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = resetTokenExpiry;
+    await user.save();
+
+    const resetUrl = `http://localhost:5000/auth/reset-password?token=${resetToken}`;
+    // send email
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Password Reset Request",
+      html: `<p>Hi ${user.full_name},</p>
+             <p>You requested to reset your password. Click the link below:</p>
+             <a href="${resetUrl}">Reset Your Password To Access Your Account</a>`,
+    });
+
+    res.json({ message: "Password reset link sent to your email" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    const user = await User.findOne({ where: { resetToken: token } });
+
+    if (!user || !user.resetTokenExpiry || Date.now() > user.resetTokenExpiry) {
+      return res
+        .status(400)
+        .json({ message: "Session expired please try agian" });
+    }
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    res.json({ message: "Password reset successful. You can now log in." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

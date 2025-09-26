@@ -1,0 +1,37 @@
+.btn-orange {
+  background-color: #f97316;
+  border-color: #f97316;
+  color: #fff;
+}
+
+.btn-orange:hover,
+.btn-orange:focus {
+  background-color: #ea580c;
+  border-color: #ea580c;
+  color: #fff;
+}
+
+.link-orange {
+  color: #f97316;
+  text-decoration: none;
+}
+
+.link-orange:hover,
+.link-orange:focus {
+  color: #ea580c;
+  text-decoration: underline;
+}
+
+.form-check-input:checked {
+  background-color: #f97316; 
+  border-color: #f97316;
+}
+
+.form-check-input:focus {
+  box-shadow: none; 
+}
+
+.form-control:focus {
+  box-shadow: none;
+  border-color: #f97316;
+}
